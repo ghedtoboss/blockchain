@@ -1,12 +1,10 @@
 package main
 
 import (
-	"blockchain/controllers"
 	"blockchain/database"
-	"blockchain/models"
 	"blockchain/routes"
+	"blockchain/schedule"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +14,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
+	"gofr.dev/pkg/gofr"
 )
 
 func main() {
@@ -29,6 +28,11 @@ func main() {
 	database.Migrate()
 
 	r := routes.InitRoute()
+	cron := gofr.New()
+
+	cron.AddCronJob("*/5 * * * * *", "Mine Block", func(ctx *gofr.Context) {
+		schedule.AutoMineBlock()
+	})
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
@@ -55,53 +59,6 @@ func main() {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
-
-	
-		bc := controllers.Blockchain{}
-		// 1. Genesis Block
-		genesis := bc.CreateGenesisBlock(time.Now().Unix())
-		fmt.Println("Genesis Hash: ", genesis.Hash)
-
-		// 2. Block 1
-		block1 := bc.CreateBlock(genesis, []models.Transaction{
-			{
-				From:      "Veli",
-				To:        "Ayşe",
-				Currency:  "BTC",
-				Amount:    10,
-				Fee:       0.1,
-				Signature: "",
-			},
-		}, time.Now().Unix())
-		fmt.Println("Block 1 Hash: ", block1.Hash)
-
-		// 3. Block 2
-		block2 := bc.CreateBlock(block1, []models.Transaction{
-			{
-				From:      "Ayşe",
-				To:        "Veli",
-				Currency:  "BTC",
-				Amount:    5,
-				Fee:       0.05,
-				Signature: "",
-			},
-		}, time.Now().Unix())
-		fmt.Println("Block 2 Hash: ", block2.Hash)
-
-		// Validate block
-		if !bc.ValidateBlock(block1, block2) {
-			fmt.Println("Block 1 is invalid")
-			return
-		} else {
-			fmt.Println("Block 1 is valid")
-		}
-
-		// Validate chain
-		if bc.ValidateChain() {
-			fmt.Println("Blockchain is valid")
-		} else {
-			fmt.Println("Blockchain is invalid")
-		}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

@@ -10,4 +10,5 @@ type Block struct {
 	Hash         string
 	Timestamp    int64
 	MerkleRoot   string
+	Nonce        uint64
 }
